@@ -1,0 +1,64 @@
+{
+  "name": "@sendhog/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Schema-generated SendHog clients with provider-shaped application methods. Not provider authentication or wire emulation.",
+  "license": "MIT",
+  "author": "SendHog",
+  "homepage": "https://sendhog.com/docs/sdks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SendHog/sdk-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SendHog/sdk-node/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --ignoreConfig --noEmit --strict --target ES2023 --module NodeNext --moduleResolution NodeNext --lib ES2023,DOM tests/types.test.ts",
+    "verify:source": "node scripts/verify-source.mjs",
+    "prepublishOnly": "node scripts/verify-source.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./ses": {
+      "types": "./src/ses.d.ts",
+      "import": "./src/ses.js"
+    },
+    "./postmark": {
+      "types": "./src/postmark.d.ts",
+      "import": "./src/postmark.js"
+    },
+    "./resend": {
+      "types": "./src/resend.d.ts",
+      "import": "./src/resend.js"
+    },
+    "./sendgrid": {
+      "types": "./src/sendgrid.d.ts",
+      "import": "./src/sendgrid.js"
+    }
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md",
+    "SOURCE.json"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "4.1.1",
+    "postal-mime": "4.0.7"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
