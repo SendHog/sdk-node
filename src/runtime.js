@@ -1,6 +1,7 @@
 // Docs: docs/sdk-schema-plan.md. Shared transport/translation; generated classes are thin.
 import { addressParser } from "postal-mime";
 import { validate, manifest, ValidationError } from "./validation.js";
+import { verifyWebhook } from './webhooks.js';
 export { ValidationError };
 export class ApiError extends Error {
   constructor(status, body) {
@@ -165,9 +166,19 @@ export class BaseClient {
     this.messages = {
       list: (query) => this.listMessages(query),
       get: (id) => this.getMessage(id),
+      events: async (id, query = {}) => (await this.request('messageEvents', undefined, { ...query, id })).value,
+    };
+    this.bulk = { get: async (id) => (await this.request('getBulk', undefined, { id })).value };
+    this.webhooks = {
+      create: async (input) => (await this.request('createWebhook', input)).value,
+      list: async () => (await this.request('listWebhooks')).value,
+      delete: async (id) => (await this.request('deleteWebhook', undefined, { id })).value,
+      verify: verifyWebhook,
     };
   }
-  async request(operation, body, params = {}) {
+  async request(operation, body, params = {}, options = {}) {
+    validate('SendOptions', options);
+    if (!params || typeof params !== 'object' || Array.isArray(params)) throw new ValidationError('Query', ['/query']);
     const definition = manifest.methods.find((m) => m.name === operation);
     if (!definition) throw new Error("Unknown operation");
     let path = definition.http.path;
@@ -177,9 +188,11 @@ export class BaseClient {
       path = path.replace("{id}", encodeURIComponent(params.id));
     }
     if (definition.query) {
-      validate(definition.query, params);
+      const queryParams = { ...params };
+      delete queryParams.id;
+      validate(definition.query, queryParams);
       const query = new URLSearchParams(
-        Object.entries(params).map(([k, v]) => [k, String(v)]),
+        Object.entries(queryParams).map(([k, v]) => [k, String(v)]),
       );
       if (query.size) path += "?" + query;
     }
@@ -192,10 +205,11 @@ export class BaseClient {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
+        ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
       redirect: "manual",
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(operation === 'sendBulk' ? 120000 : 30000),
     });
     if (response.status >= 300 && response.status < 400)
       throw new ProtocolError();
@@ -255,9 +269,9 @@ export class BaseClient {
   async getMessage(id) {
     return (await this.request("getMessage", undefined, { id })).value;
   }
-  async sendVariant(provider, input) {
+  async sendVariant(provider, input, options = {}) {
     const canonical = normalize(provider, input);
-    const result = await this.request("send", canonical);
+    const result = await this.request("send", canonical, {}, options);
     return {
       data: translate(provider, input, result.value, result.metadata),
       metadata: result.metadata,

@@ -9,6 +9,15 @@ import {
 } from "../src/index.js";
 const options = { apiKey: "fixture_not_a_real_key" };
 async function supportedCalls() {
+  const sendhog=new SendHog(options);
+  const bulk=await sendhog.sendBulk({from:'hello@example.com',template:{id:'welcome'},recipients:[{to:'a@example.net',variables:{name:'Alex'}}]},{idempotencyKey:'bulk-request'});
+  bulk.results[0].status.toLowerCase();
+  await sendhog.bulk.get(bulk.id);
+  await sendhog.messages.events('message-id',{limit:5});
+  await sendhog.webhooks.create({url:'https://example.com/hooks',events:['email.delivered']});
+  await sendhog.webhooks.list();await sendhog.webhooks.delete('hook-id');
+  // @ts-expect-error Queued customer sending is deliberately deferred.
+  await sendhog.send({from:'hello@example.com',to:'a@example.net',subject:'Hi',text:'Hi',queue:true});
   const native = {
     FromEmailAddress: "sender@example.com",
     Destination: { ToAddresses: ["r@example.net"] },

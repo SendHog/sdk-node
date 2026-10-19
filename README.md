@@ -4,9 +4,10 @@ Send transactional email through [SendHog](https://sendhog.com) with a domain-sc
 API key. Native API plus SES-, Postmark-, Resend- and SendGrid-shaped migration
 clients, all using SendHog authentication and the same transport.
 
-Requires Node.js 22+. MIT licensed. Registry publication status is recorded in
-[GitHub Releases](https://github.com/SendHog/sdk-node/releases); do not assume a
-version exists on npm until it is listed there as published.
+Requires Node.js 22+. MIT licensed. Available on
+[npm as `@sendhog/sdk`](https://www.npmjs.com/package/@sendhog/sdk), starting with
+version 0.1.0. See [GitHub Releases](https://github.com/SendHog/sdk-node/releases)
+for release artifacts and provenance.
 
 ## Install
 
@@ -14,8 +15,8 @@ version exists on npm until it is listed there as published.
 npm install @sendhog/sdk
 ```
 
-Before the first registry release, install the public source instead:
-`npm install git+https://github.com/SendHog/sdk-node.git`.
+JavaScript and TypeScript use the same package. All migration clients below are
+included as package subpaths; do not install them as separate packages.
 
 ## Send
 
@@ -98,3 +99,19 @@ CI runs on pushes/PRs. The manual `publish.yml` workflow publishes a matching `v
 tag using npm trusted publishing after the registry publisher is configured. The
 GitHub environment is `npm`. Initial npm authentication/namespace ownership must
 be configured by an authorized maintainer; no registry token is stored here.
+# Bulk sending and email events (0.2.0)
+
+`client.sendBulk({from,template:{id,variables},recipients:[{to,variables}]},
+{idempotencyKey:'stable-operation-id'})` sends one personalized message per recipient
+(up to50), waits for SES acceptance and returns ordered individual results. Inspect
+with `client.bulk.get(id)`. Repeating the same key never resends/resumes the batch.
+`client.send(message,{idempotencyKey})` also supports safe single-send replays.
+
+`client.messages.events(id,{limit,after})` reads30-day SES event history with an
+email.read key. `client.webhooks.create({url,events})`, `.list()` and `.delete(id)`
+require webhooks.manage. Creation returns `{webhook,secret}`; store the secret
+securely. Verify exact raw request bodies with exported `verifyWebhook(body,
+headers,secret)` or `client.webhooks.verify(...)` before trusting JSON.
+
+Email acceptance is not recipient delivery. No customer email queue flag exists.
+See https://sendhog.com/docs/templates/ and https://sendhog.com/docs/webhooks/.

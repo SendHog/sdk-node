@@ -15,9 +15,44 @@ import {
 } from "../src/index.js";
 import { normalize, translate } from "../src/runtime.js";
 import { manifest, validate } from "../src/validation.js";
+import {signWebhook, verifyWebhook} from '../src/webhooks.js';
 const fixtures = JSON.parse(
   readFileSync(new URL("../contract/cases.json", import.meta.url)),
 );
+
+test('bulk, events and webhook SDK methods use the canonical routes, scope and idempotency options', async()=>{
+  const calls=[];
+  const client=new SendHog({apiKey:'fixture',fetch:async(url,init)=>{
+    calls.push({url,init});
+    if(url.endsWith('/send/bulk')||url.endsWith('/send/bulk/bulk-id'))return Response.json({id:'bulk-id',results:[{to:'a@example.net',status:'accepted',id:'message-id'}]});
+    if(url.includes('/events?'))return Response.json({data:[],has_more:false,next_cursor:null});
+    if(init.method==='DELETE')return Response.json({id:'hook-id',deleted:true});
+    if(init.method==='POST')return Response.json({webhook:{id:'hook-id',url:'https://example.com/hook',events:['email.delivered'],enabled:true,created_at:new Date().toISOString()},secret:'whsec_'+globalThis.btoa('s'.repeat(32))});
+    return Response.json({data:[]});
+  }});
+  const bulk={from:'hello@example.com',template:{id:'welcome'},recipients:[{to:'a@example.net',variables:{name:'Alex'}}]};
+  await assert.rejects(()=>client.sendBulk(bulk),ValidationError);
+  await client.sendBulk(bulk,{idempotencyKey:'bulk-request'});
+  assert.equal(calls[0].init.headers['Idempotency-Key'],'bulk-request');
+  await client.bulk.get('bulk-id');
+  await client.messages.events('a/b',{limit:5});
+  assert(calls[2].url.endsWith('/v1/messages/a%2Fb/events?limit=5'));
+  await client.webhooks.create({url:'https://example.com/hook',events:['email.delivered']});
+  await client.webhooks.list();await client.webhooks.delete('hook-id');
+  assert.equal(calls[5].init.method,'DELETE');
+  assert.equal(calls[5].url,'https://app.sendhog.com/v1/webhooks/hook-id');
+  await assert.rejects(()=>client.sendBulk({...bulk,queue:true},{idempotencyKey:'bad'}),ValidationError);
+});
+test('Standard Webhooks verification authenticates exact raw bodies and rejects stale/tampered events',async()=>{
+  const id='evt_'+'a'.repeat(64),secret='whsec_'+globalThis.btoa('s'.repeat(32)),timestamp=String(Math.floor(Date.now()/1000));
+  const event={id,type:'email.delivered',created_at:new Date().toISOString(),data:{message_id:'m',provider_id:'p',recipients:[],details:{}}};
+  const body=JSON.stringify(event),headers={'webhook-id':id,'webhook-timestamp':timestamp,'webhook-signature':await signWebhook(secret,id,timestamp,body)};
+  assert.deepEqual(await verifyWebhook(body,headers,secret),event);
+  await assert.rejects(()=>verifyWebhook(body+' ',headers,secret));
+  await assert.rejects(()=>verifyWebhook(body,{...headers,'webhook-timestamp':'1'},secret));
+  const client=new SendHog({apiKey:'fixture',fetch:async()=>{throw Error('No HTTP expected');}});
+  assert.deepEqual(await client.webhooks.verify(body,headers,secret),event);
+});
 const examples = JSON.parse(
   readFileSync(new URL("../contract/examples.json", import.meta.url)),
 );
