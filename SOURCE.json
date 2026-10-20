@@ -1,10 +1,10 @@
 {
   "formatVersion": 1,
   "sourceRepository": "https://github.com/SendHog/sendhog",
-  "sourceCommit": "b453c837ae78d077711ca5bcec57ebf95321a359",
+  "sourceCommit": "66ca5e6cb5cfc931ba9edd0a115342abe002c362",
   "language": "node",
   "packageName": "@sendhog/sdk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "contractSha256": "b20bebc549754d13919ba25471467bbdfc48ee7d5c5134fe9b8545e50d3ffb53",
   "files": {
     ".github/workflows/ci.yml": "ff10b7ac1534091da1aebcd2eb5d236797b2c171dd4ccd7856e45a733cb04a6f",
@@ -18,8 +18,8 @@
     "contract/manifest.json": "e4e2e2cd74ba498336231c3e72f0447f7fae021f1cdc8223ef15d14c393bfef0",
     "contract/openapi.json": "573f878e7ce2b5b8e6eff126ca700e62fda7d7d2e3b9ddfdf4bb805aff8aba40",
     "contract/schema.json": "1652acce455898b9fdb26a7762adb12630455c7901b5ec5ee2e7d387b216755c",
-    "package-lock.json": "9d010bccecd05584d05967b461480c21dad9f47ba5760b7bf05b93649268ecef",
-    "package.json": "d86b3ead4b4fb8f114cde4495bab9896935310bf9aa23171662db9e6aee166a2",
+    "package-lock.json": "f50917cecaa4176eeda7e9cf701ac709b912e6ca1c46dacd4e4c0d6025b9d188",
+    "package.json": "cf71531b130773fb5ea5b73b6b63ce96b1adb5e3df00ef566fc1a4d1d38aa6a9",
     "scripts/verify-source.mjs": "d11fc0493a2114fe0cd7edcd3cb278e45420c4656b275bfc36ac1c49862c9261",
     "src/contract.generated.d.ts": "1d2a9b745cd7fe64106c583097e6b9cada7770918512ff538fbce4881769d3f6",
     "src/contract.generated.js": "3d270da49709f820766546750e03b41eb8b841a72890388d1743d626aa7be721",
