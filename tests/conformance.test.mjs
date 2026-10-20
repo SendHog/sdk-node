@@ -53,6 +53,14 @@ test('Standard Webhooks verification authenticates exact raw bodies and rejects 
   const client=new SendHog({apiKey:'fixture',fetch:async()=>{throw Error('No HTTP expected');}});
   assert.deepEqual(await client.webhooks.verify(body,headers,secret),event);
 });
+test('unified received/bounce/delivery subscriptions and received signatures are supported in this release',async()=>{
+ const events=['email.received','email.bounced','email.delivered'];let requests=0;
+ const client=new SendHog({apiKey:'fixture',fetch:async(url,init)=>{requests++;assert.equal(url,'https://app.sendhog.com/v1/webhooks');assert.deepEqual(JSON.parse(init.body).events,events);return Response.json({webhook:{id:'unified-hook',url:'https://example.com/hook',events,enabled:true,created_at:new Date().toISOString()},secret:'whsec_'+globalThis.btoa('s'.repeat(32))});}});
+ const registration=await client.webhooks.create({url:'https://example.com/hook',events});assert.deepEqual(registration.webhook.events,events);
+ const id='evt_'+'b'.repeat(64),timestamp=String(Math.floor(Date.now()/1000)),event={id,type:'email.received',created_at:new Date().toISOString(),data:{message_id:'in_fixture',provider_id:'in_fixture',recipients:['hello@example.com'],details:{raw_path:'/v1/messages/in_fixture/raw'}}};
+ const body=JSON.stringify(event),headers={'webhook-id':id,'webhook-timestamp':timestamp,'webhook-signature':await signWebhook(registration.secret,id,timestamp,body)};
+ assert.deepEqual(await client.webhooks.verify(body,headers,registration.secret),event);assert.equal(requests,1);
+});
 const examples = JSON.parse(
   readFileSync(new URL("../contract/examples.json", import.meta.url)),
 );

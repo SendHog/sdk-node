@@ -1,6 +1,6 @@
 {
   "name": "@sendhog/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Schema-generated SendHog clients with provider-shaped application methods. Not provider authentication or wire emulation.",
   "license": "MIT",

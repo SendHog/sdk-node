@@ -1,5 +1,10 @@
 # SendHog JavaScript / TypeScript SDK
 
+Version0.3.0 adds `email.received` to the existing signed webhook/event contract.
+One endpoint can receive inbound mail, bounces, deliveries and the other email
+events. Existing subscriptions are unchanged until you opt in. Enable domain
+receiving/MX separately; details: https://sendhog.com/docs/receiving/.
+
 Send transactional email through [SendHog](https://sendhog.com) with a domain-scoped
 API key. Native API plus SES-, Postmark-, Resend- and SendGrid-shaped migration
 clients, all using SendHog authentication and the same transport.
@@ -76,7 +81,8 @@ No automatic send retries; inspect failures before resubmitting an email.
 All use **SendHog** API keys/endpoints, not upstream credentials or SigV4. Only the
 documented subset is supported: text/HTML, up to 50 total recipients, cc/bcc/reply-to;
 native/Resend-style requests also support published SendHog templates. No raw MIME,
-attachments, batch, scheduling, tracking or complete upstream SDK compatibility.
+outbound attachments, provider batch APIs, scheduling, tracking or complete upstream
+SDK compatibility. Native `sendBulk` is supported as described below.
 [Documentation](https://sendhog.com/docs/sdks/) · [Migration](https://sendhog.com/docs/migration/).
 
 ## Source and development
@@ -115,3 +121,24 @@ headers,secret)` or `client.webhooks.verify(...)` before trusting JSON.
 
 Email acceptance is not recipient delivery. No customer email queue flag exists.
 See https://sendhog.com/docs/templates/ and https://sendhog.com/docs/webhooks/.
+
+## Unified received-email webhooks (0.3.0)
+
+```ts
+const { webhook, secret } = await client.webhooks.create({
+  url: 'https://example.com/webhooks/sendhog',
+  events: ['email.received', 'email.bounced', 'email.delivered'],
+});
+// Save secret securely; it is returned only once. Never log it.
+```
+
+Creation requires `webhooks.manage`. Verify the exact raw body with
+`verifyWebhook(rawBody, headers, secret)` before parsing/processing and deduplicate
+the returned event ID. All eleven types use the same signer, envelope and retry
+policy. A received notification contains metadata, not body/attachment bytes;
+`client.messages.get(event.data.message_id)` reads retained text with `email.read`.
+Native HTTP `GET /v1/messages/{id}/raw` downloads the original MIME and attachments
+with the same read scope; this binary route is not a provider SDK method.
+Webhook retries never resend email. Older SDK0.2 validators reject email.received;
+upgrade before selecting it. Normal sends and outgoing-event subscriptions remain
+backward-compatible.
